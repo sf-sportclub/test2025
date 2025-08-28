@@ -1,99 +1,90 @@
 <!doctype html>
 <html lang="th">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Static UI → GAS</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    :root { --bg:#0b0e12; --card:#111827; --line:#1f2937; --fg:#e5e7eb; --muted:#9ca3af; }
-    *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px/1.5 Inter,system-ui,Segoe UI,Roboto,Arial}
-    .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-    .card{width:100%;max-width:560px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
-    h1{font-size:18px;margin:0 0 10px}
-    p.meta{margin:0 0 16px;color:var(--muted)}
-    label{display:block;margin-top:12px;color:#cbd5e1}
-    input,textarea{width:100%;margin-top:6px;background:#0f172a;border:1px solid #334155;color:var(--fg);padding:10px;border-radius:10px}
-    textarea{min-height:120px;resize:vertical}
-    .row{display:flex;gap:10px}
-    .row > div{flex:1}
-    .btn{margin-top:16px;display:inline-block;padding:10px 14px;background:#2563eb;border:0;color:#fff;border-radius:10px;cursor:pointer}
-    .hint{margin-top:10px;color:var(--muted)}
-    .ok{color:#34d399}
-    .err{color:#f87171}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <form class="card" id="form">
-      <h1>ส่งข้อมูลไป Google Sheet</h1>
-      <p class="meta">สแตติก UI (โฮสต์นอก) → ส่งข้อมูลไป Apps Script API</p>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>โหวตหลักสูตร</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 20px; }
+  .box { max-width: 520px; margin: auto; border: 1px solid #ddd; border-radius: 12px; padding: 16px; }
+  label { display:block; margin-top: 10px; }
+  input, select { width:100%; padding:10px; margin-top:6px; }
+  .row { display:flex; gap:10px; }
+  .row > * { flex:1; }
+  button { margin-top:14px; padding:10px 14px; }
+  .msg { margin-top:10px; color:#0a7a2e; }
+  .err { color:#b00020; }
+</style>
 
-      <div class="row">
-        <div>
-          <label>ชื่อ
-            <input id="name" placeholder="เช่น เจ">
-          </label>
-        </div>
-        <div>
-          <label>อีเมล
-            <input id="email" placeholder="name@example.com">
-          </label>
-        </div>
-      </div>
+<div class="box">
+  <h2>หลักสูตรที่อยากให้จัด</h2>
 
-      <label>ข้อความ
-        <textarea id="message" placeholder="พิมพ์ข้อความ..."></textarea>
-      </label>
+  <form id="f">
+    <label>รหัสพนักงาน
+      <input id="employeeId" required>
+    </label>
 
-      <button class="btn" type="submit">ส่งข้อมูล</button>
-      <div class="hint" id="hint">เมื่อกดส่ง จะส่งข้อมูลแบบ <code>text/plain</code> เพื่อเลี่ยง CORS</div>
-    </form>
-  </div>
+    <label>แผนก
+      <select id="department" required>
+        <option value="" selected disabled>เลือกแผนก</option>
+        <option>Human Resources</option>
+        <option>Information Technology</option>
+        <option>Marketing</option>
+        <option>Operation</option>
+        <option>Project</option>
+        <!-- เติมรายการอื่นได้ -->
+      </select>
+    </label>
 
-  <script>
-    // TODO: แปะ URL /exec ของคุณที่นี่
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwrp3X20W2sst0JxpZLGaBrFF67dB9m2XbAzz-lhIuRAtn4hDMc7A9-1PUJiGxPvytY/exec';
+    <label>ผลโหวต
+      <select id="vote" required>
+        <option value="" selected disabled>เลือกหัวข้อ</option>
+        <option>Work life Balance</option>
+        <option>AI Presentation</option>
+        <option>Leadership</option>
+        <option>Communication</option>
+      </select>
+    </label>
 
-    const form = document.getElementById('form');
-    const hint = document.getElementById('hint');
+    <button type="submit">ส่งผลโหวต</button>
+    <div id="msg" class="msg"></div>
+  </form>
+</div>
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const payload = {
-        name: document.getElementById('name').value.trim(),
-        email: document.getElementById('email').value.trim(),
-        message: document.getElementById('message').value.trim(),
-      };
+<script>
+  // วางลิงก์ /exec ของ Apps Script ที่ Deploy แล้ว
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbwNwDM6g7DmneaVMFQ7XybrFbQ0bI1MulA-diqjaWpYMzGw91K2BdDUsSY87gj_f5eB/exec';
 
-      hint.className = 'hint';
-      hint.textContent = 'กำลังส่ง…';
+  const f   = document.getElementById('f');
+  const msg = document.getElementById('msg');
 
-      try {
-        // เคล็ดลับกัน CORS:
-        // - ใช้ method: POST
-        // - mode: 'no-cors' → response จะเป็น opaque (อ่านผลไม่ได้)
-        // - Content-Type: text/plain → เบราว์เซอร์จะไม่ preflight
-        await fetch(GAS_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    msg.className = 'msg'; msg.textContent = 'กำลังส่ง...';
 
-        // อ่านผลตอบกลับไม่ได้ (opaque) → แจ้งสำเร็จแบบ optimistic
-        hint.className = 'hint ok';
-        hint.textContent = 'ส่งข้อมูลแล้ว! (ถ้าต้องการยืนยันฝั่งเซิร์ฟเวอร์ ให้ตั้งบอท LINE/Email แจ้งกลับจาก GAS)';
+    const payload = {
+      employeeId: document.getElementById('employeeId').value.trim(),
+      department: document.getElementById('department').value,
+      vote:       document.getElementById('vote').value
+    };
 
-        form.reset();
-      } catch (err) {
-        console.error(err);
-        hint.className = 'hint err';
-        hint.textContent = 'ส่งไม่สำเร็จ กรุณาลองใหม่';
-      }
-    });
-  </script>
-</body>
+    try {
+      // no-cors + text/plain → ไม่เกิด preflight → GAS รับได้
+      await fetch(GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+
+      // หมายเหตุ: โหมด no-cors อ่านผลตอบกลับไม่ได้ → โชว์แบบ optimistic
+      msg.className = 'msg'; 
+      msg.textContent = 'ส่งผลโหวตเรียบร้อย ขอบคุณครับ!';
+      f.reset();
+    } catch (err) {
+      msg.className = 'msg err';
+      msg.textContent = 'ส่งไม่สำเร็จ กรุณาลองใหม่';
+      console.error(err);
+    }
+  });
+</script>
 </html>
